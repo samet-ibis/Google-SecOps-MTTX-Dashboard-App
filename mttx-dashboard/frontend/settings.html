@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MTTX Dashboard — Settings</title>
+<style>
+  :root{
+    --bg:#0b0f1e; --surface:#111a2e; --surface-2:#0e1626; --border:#22304e;
+    --text:#e7ebf3; --text-muted:#8b97b0; --accent:#facc15; --danger:#f87171; --ok:#4ade80;
+    --radius:12px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;}
+  .topbar{display:flex;align-items:center;gap:12px;padding:14px 22px;border-bottom:1px solid var(--border);background:var(--surface-2);position:sticky;top:0;z-index:5}
+  .topbar h1{font-size:1.05rem;margin:0;font-weight:800;letter-spacing:.3px}
+  .topbar .spacer{flex:1}
+  .btn{background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 14px;font-size:.85rem;cursor:pointer;text-decoration:none;display:inline-block}
+  .btn:hover{border-color:#3a4a6a}
+  .btn-primary{background:var(--accent);color:#0b0f1e;font-weight:700;border-color:var(--accent)}
+  .btn-danger{color:var(--danger);border-color:#5a2a2a}
+  .wrap{max-width:900px;margin:26px auto;padding:0 18px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-bottom:22px}
+  .card h2{margin:0 0 4px;font-size:1.05rem}
+  .card .sub{color:var(--text-muted);font-size:.85rem;margin-bottom:16px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  input,select{background:var(--surface-2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 12px;font-size:.9rem}
+  input{flex:1;min-width:160px}
+  table{width:100%;border-collapse:collapse;margin-top:6px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--border);font-size:.88rem}
+  th{color:var(--text-muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.05em}
+  .tag{display:inline-block;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:1px 8px;font-size:.72rem;color:var(--text-muted)}
+  .empty{color:var(--text-muted);font-size:.85rem;padding:14px 0}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 18px;font-size:.85rem;opacity:0;transition:.2s;pointer-events:none}
+  .toast.show{opacity:1}
+  .x{background:none;border:none;color:var(--danger);cursor:pointer;font-size:1rem}
+  code{background:var(--surface-2);padding:1px 6px;border-radius:5px;font-size:.82rem}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>⚙ MTTX Dashboard — Settings</h1>
+    <div class="spacer"></div>
+    <a class="btn" href="/">← Dashboard</a>
+    <a class="btn" href="/auth/logout">Sign out</a>
+  </div>
+
+  <div class="wrap">
+
+    <!-- ══════════ GOOGLE SECOPS CREDENTIALS ══════════ -->
+    <div class="card">
+      <h2>Google SecOps Credentials</h2>
+      <div class="sub">The service-account key MTTX uses to query Chronicle. Paste the JSON or upload the
+        <code>.json</code> key file — it is stored on the server only (the private key is never shown here).</div>
+
+      <div id="cred-status" class="row" style="margin-bottom:12px"><span class="empty" style="padding:0">Checking…</span></div>
+
+      <div class="row" style="align-items:flex-start">
+        <textarea id="cred-json" placeholder='Paste service-account JSON here… {"type":"service_account", …}'
+          style="flex:1;min-width:260px;min-height:96px;font-family:ui-monospace,Menlo,monospace;font-size:.8rem;resize:vertical"></textarea>
+      </div>
+      <div class="row">
+        <input id="cred-file" type="file" accept="application/json,.json" style="flex:0 0 auto" onchange="onCredFile(event)">
+        <button class="btn btn-primary" onclick="saveCred()">Save</button>
+        <button class="btn btn-danger" onclick="removeCred()">Remove</button>
+      </div>
+    </div>
+
+    <!-- ══════════ ACCESS / LOGIN ══════════ -->
+    <div class="card">
+      <h2>Access / Login</h2>
+      <div class="sub">Protect the whole dashboard with a single password. Ships open — set a password to lock it.
+        Everyone shares this one password; changing it signs existing sessions out.</div>
+
+      <div id="auth-status" class="row" style="margin-bottom:12px"><span class="empty" style="padding:0">Checking…</span></div>
+
+      <div class="row" id="auth-form">
+        <input id="auth-pw" type="password" placeholder="New password (min 4 chars)" onkeydown="if(event.key==='Enter')savePw()">
+        <button class="btn btn-primary" onclick="savePw()">Set password</button>
+        <button class="btn btn-danger" onclick="disablePw()">Disable login</button>
+      </div>
+    </div>
+
+    <!-- ══════════ CASE FILTERS ══════════ -->
+    <div class="card">
+      <h2>Case Filters (Exclusions)</h2>
+      <div class="sub">If any of these keywords appears in a case's <code>title</code>, <code>rule name</code> or
+        <code>alert names</code>, that case is <b>excluded</b> from MTTX. These are not hard-coded —
+        add or remove them here; changes apply on the next analysis / precache run.</div>
+
+      <div class="row">
+        <input id="kw" placeholder="Filter keyword (e.g. REFSET, Jira Issue)" onkeydown="if(event.key==='Enter')addExc()">
+        <input id="note" placeholder="Note (optional)" style="max-width:220px">
+        <button class="btn btn-primary" onclick="addExc()">+ Add</button>
+      </div>
+
+      <table>
+        <thead><tr><th>Keyword</th><th>Note</th><th>Added</th><th style="width:40px"></th></tr></thead>
+        <tbody id="exc-body"><tr><td colspan="4" class="empty">Loading…</td></tr></tbody>
+      </table>
+    </div>
+
+    <!-- ══════════ BRANDING ══════════ -->
+    <div class="card">
+      <h2>Branding (Logo)</h2>
+      <div class="sub">Optional logo shown in the dashboard top bar. Nothing is baked into the app —
+        upload an image or paste an <code>https://</code> image URL. Leave empty for no logo.</div>
+
+      <div class="row">
+        <input id="logo-url" placeholder="https://… image URL (or use Upload)" onkeydown="if(event.key==='Enter')saveLogo()">
+        <input id="logo-file" type="file" accept="image/*" style="flex:0 0 auto" onchange="onLogoFile(event)">
+        <button class="btn btn-primary" onclick="saveLogo()">Save</button>
+        <button class="btn btn-danger" onclick="removeLogo()">Remove</button>
+      </div>
+      <div class="row" style="margin-bottom:0">
+        <span class="sub" style="margin:0">Preview:</span>
+        <img id="logo-preview" alt="" style="height:28px;width:auto;display:none;background:var(--surface-2);padding:4px 8px;border-radius:6px;border:1px solid var(--border)">
+        <span id="logo-none" class="empty" style="padding:0">No logo set.</span>
+      </div>
+    </div>
+
+    <!-- ══════════ CHRONICLE CONNECTIONS ══════════ -->
+    <div class="card">
+      <h2>Chronicle Connections (Tenants)</h2>
+      <div class="sub">The Google SecOps (Chronicle) instances MTTX queries. The dashboard's selector lists these.</div>
+
+      <div class="row">
+        <input id="t-name" placeholder="Name (e.g. Production)" style="max-width:180px">
+        <input id="t-guid" placeholder="Customer ID / GUID" style="max-width:260px">
+        <input id="t-region" placeholder="Region (e.g. europe)" style="max-width:150px">
+        <input id="t-proj" placeholder="GCP Project ID" style="max-width:200px">
+        <button class="btn btn-primary" onclick="addTenant()">+ Add</button>
+      </div>
+
+      <table>
+        <thead><tr><th>Name</th><th>Region</th><th>Project</th><th style="width:40px"></th></tr></thead>
+        <tbody id="t-body"><tr><td colspan="4" class="empty">Loading…</td></tr></tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+const API='/api';
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+// ── Filters ──
+async function loadExc(){
+  const body=document.getElementById('exc-body');
+  try{
+    const rows=await fetch(`${API}/exclusions`).then(r=>r.json());
+    if(!rows.length){ body.innerHTML='<tr><td colspan="4" class="empty">No filters — all cases are shown.</td></tr>'; return; }
+    body.innerHTML=rows.map(r=>`<tr>
+      <td><b>${esc(r.keyword)}</b></td>
+      <td>${r.note?`<span class="tag">${esc(r.note)}</span>`:'—'}</td>
+      <td style="color:var(--text-muted);font-size:.8rem">${r.created_at?esc(String(r.created_at).slice(0,10)):''}</td>
+      <td><button class="x" title="Delete" onclick="delExc(${r.id})">✕</button></td>
+    </tr>`).join('');
+  }catch(e){ body.innerHTML='<tr><td colspan="4" class="empty">Failed to load (is the backend running?)</td></tr>'; }
+}
+async function addExc(){
+  const kw=document.getElementById('kw').value.trim();
+  const note=document.getElementById('note').value.trim();
+  if(!kw){ toast('Enter a keyword'); return; }
+  const r=await fetch(`${API}/exclusions`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({keyword:kw,note:note||null})});
+  if(r.ok){ document.getElementById('kw').value='';document.getElementById('note').value=''; toast('Added'); loadExc(); }
+  else if(r.status===409){ toast('Already exists'); }
+  else{ toast('Error'); }
+}
+async function delExc(id){
+  if(!confirm('Delete this filter?')) return;
+  const r=await fetch(`${API}/exclusions/${id}`,{method:'DELETE'});
+  if(r.ok||r.status===204){ toast('Deleted'); loadExc(); } else toast('Error');
+}
+
+// ── Google SecOps credentials ──
+let _credData = '';
+async function loadCred(){
+  const el=document.getElementById('cred-status');
+  try{
+    const s=await fetch(`${API}/credentials`).then(r=>r.json());
+    if(s.configured){
+      el.innerHTML=`<span class="tag" style="border-color:#2a5a2a;color:var(--ok)">✓ Configured</span>
+        <span class="sub" style="margin:0">${esc(s.client_email||'')}${s.project_id?' · '+esc(s.project_id):''}</span>`;
+    } else {
+      el.innerHTML='<span class="tag" style="border-color:#5a2a2a;color:var(--danger)">Not configured</span>'+
+        '<span class="sub" style="margin:0">Chronicle queries will fail until a key is added.</span>';
+    }
+  }catch(e){ el.innerHTML='<span class="empty" style="padding:0">Failed to load.</span>'; }
+}
+function onCredFile(ev){
+  const f=ev.target.files&&ev.target.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{ document.getElementById('cred-json').value=rd.result; toast('Loaded — click Save'); };
+  rd.readAsText(f);
+}
+async function saveCred(){
+  const content=document.getElementById('cred-json').value.trim();
+  if(!content){ toast('Paste the JSON or choose a file'); return; }
+  const r=await fetch(`${API}/credentials`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({content})});
+  if(r.ok){ document.getElementById('cred-json').value=''; document.getElementById('cred-file').value=''; toast('Saved'); loadCred(); }
+  else{ const d=await r.json().catch(()=>({})); toast(d.detail||'Invalid service-account JSON'); }
+}
+async function removeCred(){
+  if(!confirm('Remove the service-account key?')) return;
+  const r=await fetch(`${API}/credentials`,{method:'DELETE'});
+  if(r.ok||r.status===204){ toast('Removed'); loadCred(); } else toast('Error');
+}
+
+// ── Access / login password ──
+async function loadAuth(){
+  const el=document.getElementById('auth-status'), form=document.getElementById('auth-form');
+  try{
+    const s=await fetch(`${API}/auth/config`).then(r=>r.json());
+    if(s.env_locked){
+      el.innerHTML='<span class="tag">Locked by MTTX_PASSWORD env var</span>';
+      form.style.display='none'; return;
+    }
+    el.innerHTML = s.enabled
+      ? '<span class="tag" style="border-color:#2a5a2a;color:var(--ok)">✓ Login enabled</span>'
+      : '<span class="tag" style="border-color:#5a2a2a;color:var(--danger)">Open — no login</span>';
+  }catch(e){ el.innerHTML='<span class="empty" style="padding:0">Failed to load.</span>'; }
+}
+async function savePw(){
+  const pw=document.getElementById('auth-pw').value;
+  if(pw.length<4){ toast('At least 4 characters'); return; }
+  const r=await fetch(`${API}/auth/password`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
+  if(r.ok){ document.getElementById('auth-pw').value=''; toast('Password set — signing you in…'); setTimeout(()=>location.href='/auth/login?next=/settings.html',900); }
+  else{ const d=await r.json().catch(()=>({})); toast(d.detail||'Error'); }
+}
+async function disablePw(){
+  if(!confirm('Disable login? The dashboard will be open to anyone who can reach it.')) return;
+  const r=await fetch(`${API}/auth/password`,{method:'DELETE'});
+  if(r.ok||r.status===204){ toast('Login disabled'); loadAuth(); } else { const d=await r.json().catch(()=>({})); toast(d.detail||'Error'); }
+}
+
+// ── Branding (logo) ──
+let _logoData = '';   // pending data URL from a file upload
+function _showLogo(val){
+  const img=document.getElementById('logo-preview'), none=document.getElementById('logo-none');
+  if(val){ img.src=val; img.style.display='inline'; none.style.display='none'; }
+  else { img.style.display='none'; none.style.display='inline'; }
+}
+async function loadLogo(){
+  try{
+    const { logo }=await fetch(`${API}/branding`).then(r=>r.json());
+    document.getElementById('logo-url').value = (logo && logo.startsWith('http')) ? logo : '';
+    _showLogo(logo||'');
+  }catch(e){ _showLogo(''); }
+}
+function onLogoFile(ev){
+  const f=ev.target.files&&ev.target.files[0]; if(!f) return;
+  if(f.size>2_500_000){ toast('Image too large (max ~2.5 MB)'); ev.target.value=''; return; }
+  const rd=new FileReader();
+  rd.onload=()=>{ _logoData=rd.result; document.getElementById('logo-url').value=''; _showLogo(_logoData); toast('Loaded — click Save'); };
+  rd.readAsDataURL(f);
+}
+async function saveLogo(){
+  const url=document.getElementById('logo-url').value.trim();
+  const logo=_logoData || url;
+  if(!logo){ toast('Upload an image or paste a URL'); return; }
+  const r=await fetch(`${API}/branding`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({logo})});
+  if(r.ok){ _logoData=''; document.getElementById('logo-file').value=''; toast('Saved'); loadLogo(); }
+  else{ toast('Error — must be a data:image or https:// URL'); }
+}
+async function removeLogo(){
+  if(!confirm('Remove the logo?')) return;
+  const r=await fetch(`${API}/branding`,{method:'DELETE'});
+  if(r.ok||r.status===204){ _logoData=''; document.getElementById('logo-url').value=''; document.getElementById('logo-file').value=''; toast('Removed'); _showLogo(''); }
+  else toast('Error');
+}
+
+// ── Tenants ──
+async function loadTenants(){
+  const body=document.getElementById('t-body');
+  try{
+    const rows=await fetch(`${API}/tenants`).then(r=>r.json());
+    if(!rows.length){ body.innerHTML='<tr><td colspan="4" class="empty">No connections — add a Chronicle tenant.</td></tr>'; return; }
+    body.innerHTML=rows.map(t=>`<tr>
+      <td><b>${esc(t.name)}</b></td>
+      <td>${esc(t.region||'')}</td>
+      <td style="color:var(--text-muted);font-size:.8rem">${esc(t.gcp_project_id||'')}</td>
+      <td><button class="x" title="Delete" onclick="delTenant(${t.id})">✕</button></td>
+    </tr>`).join('');
+  }catch(e){ body.innerHTML='<tr><td colspan="4" class="empty">Failed to load.</td></tr>'; }
+}
+async function addTenant(){
+  const name=document.getElementById('t-name').value.trim();
+  const guid=document.getElementById('t-guid').value.trim();
+  const region=document.getElementById('t-region').value.trim();
+  const proj=document.getElementById('t-proj').value.trim();
+  if(!name||!guid||!region||!proj){ toast('Name, GUID, Region and Project are required'); return; }
+  const r=await fetch(`${API}/tenants`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,guid,region,gcp_project_id:proj})});
+  if(r.ok){ ['t-name','t-guid','t-region','t-proj'].forEach(i=>document.getElementById(i).value=''); toast('Added'); loadTenants(); }
+  else{ toast('Error — check the fields'); }
+}
+async function delTenant(id){
+  if(!confirm('Delete this connection?')) return;
+  const r=await fetch(`${API}/tenants/${id}`,{method:'DELETE'});
+  if(r.ok||r.status===204){ toast('Deleted'); loadTenants(); } else toast('Error');
+}
+
+loadCred(); loadAuth(); loadExc(); loadLogo(); loadTenants();
+</script>
+</body>
+</html>
