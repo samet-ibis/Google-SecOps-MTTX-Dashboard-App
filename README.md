@@ -102,7 +102,7 @@ flowchart LR
 
 ```bash
 git clone https://github.com/samet-ibis/Google-SecOps-MTTX-Dashboard-App.git
-cd mttx-dashboard
+cd Google-SecOps-MTTX-Dashboard-App/mttx-dashboard/
 
 # install backend dependencies
 pip install -r backend/requirements.txt
