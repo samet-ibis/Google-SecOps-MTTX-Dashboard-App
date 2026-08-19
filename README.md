@@ -9,6 +9,9 @@ Everything is configured from the app itself (service account, tenants, case
 filters, branding, login password). No config files to edit, no environment
 variables required. Drop it on a server, open it, fill in Settings, share the URL.
 
+Take a look at this post, I created this repo by referring it;
+https://medium.com/@thatsiemguy/from-prd-to-app-building-secops-mttx-reports-with-gemini-and-the-secops-sdk-91cbb8fd3a1c
+
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-backend-009688?logo=fastapi&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-storage-003B57?logo=sqlite&logoColor=white)
